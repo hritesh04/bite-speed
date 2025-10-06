@@ -1,5 +1,5 @@
 import { Client } from "pg";
-import { IdentityInput } from "./types";
+import { IdentityInput, Precedence, precedene } from "./types";
 export class DB {
   private static db: DB;
   private client: Client | null = null;
@@ -64,12 +64,12 @@ export class DB {
     }
   }
 
-  async addContact(input: IdentityInput) {
+  async addContact(input: IdentityInput, precedence: Precedence = "primary") {
     try {
       const client = await this.getConnection();
       const result = await client.query(
-        `INSERT INTO contact(phone_number,email) VALUES($1,$2) RETURNING *;`,
-        [String(input.phoneNumber), input.email]
+        `INSERT INTO contact(phone_number,email,link_precedence) VALUES($1,$2) RETURNING *;`,
+        [String(input.phoneNumber), input.email, precedence]
       );
       console.log(result.rows[0]);
       return result.rows[0];

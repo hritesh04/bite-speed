@@ -9,7 +9,7 @@ export const IdentityReturnTypeSchema = z.object({
   contact: z.object({
     primaryContactId: z.int(),
     emails: z.array(z.email()),
-    phoneNumbers: z.array(z.int()),
+    phoneNumbers: z.array(z.string()),
     secondaryContactIds: z.array(z.int()).nullable(),
   }),
 });
@@ -27,6 +27,9 @@ export const ContactSchema = z.object({
   deleted_at: z.date().nullable(),
 });
 
+export const ContactsSchema = z.array(ContactSchema);
+
 export type IdentityInput = z.infer<typeof IdentityInputSchema>;
 export type IdentityReturnType = z.infer<typeof IdentityReturnTypeSchema>;
 export type Contact = z.infer<typeof ContactSchema>;
+export type Precedence = z.infer<typeof precedene>;
