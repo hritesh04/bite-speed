@@ -8,7 +8,6 @@ import {
 } from "./types";
 import { DB } from "./db";
 import dotenv from "dotenv";
-import { success } from "zod";
 
 dotenv.config();
 
@@ -30,83 +29,116 @@ async function setupServer() {
     "/identify",
     validateInput,
     async (req: Request, res: Response) => {
-      const body: IdentityInput = req.body;
+      try {
+        const body: IdentityInput = req.body;
 
-      // empty body
-      if (!body.email && !body.phoneNumber)
-        return res.status(400).json({ success: false, error: "invalid input" });
-      const existingContact = await db.getContact(body);
-
-      // new contact since there is no exisiting contact
-      if (!existingContact) {
-        const newContact = await db.addContact(body);
-        const contactData = ContactSchema.safeParse(newContact);
-
-        // db result doesnt match contact schema
-        if (!contactData.success) {
-          console.log(contactData.error);
+        // empty body
+        if (!body.email && !body.phoneNumber)
           return res
-            .status(500)
-            .json({ error: "db schema doesn't match contact schema" });
+            .status(400)
+            .json({ success: false, error: "invalid input" });
+        const existingContact = await db.getContact(body);
+
+        // new contact since there is no exisiting contact
+        if (!existingContact) {
+          const newContact = await db.addContact(body);
+          const contactData = ContactSchema.safeParse(newContact);
+
+          // db result doesnt match contact schema
+          if (!contactData.success) {
+            console.log(contactData.error);
+            return res
+              .status(500)
+              .json({ error: "db schema doesn't match contact schema" });
+          }
+
+          const result: IdentityReturnType = {
+            contact: {
+              primaryContactId: contactData.data.id,
+              emails: contactData.data.email ? [contactData.data.email] : [],
+              phoneNumbers: contactData.data.phone_number
+                ? [contactData.data.phone_number]
+                : [],
+              secondaryContactIds: [],
+            },
+          };
+          return res.status(200).json({ success: true, data: result });
         }
 
-        const result: IdentityReturnType = {
-          contact: {
-            primaryContactId: contactData.data.id,
-            emails: contactData.data.email ? [contactData.data.email] : [],
-            phoneNumbers: contactData.data.phone_number
-              ? [contactData.data.phone_number]
-              : [],
-            secondaryContactIds: [],
-          },
-        };
-        return res.status(200).json({ success: true, data: result });
-      }
-
-      const contacts = ContactsSchema.safeParse(existingContact);
-
-      // db result doesnt match contact schema
-      if (!contacts.success)
-        return res.status(400).json({ error: "invalid input" });
-
-      if (contacts.data.length === 1) {
-        const newContact = await db.addContact(body, "secondary");
-        const contactData = ContactSchema.safeParse(newContact);
+        const contacts = ContactsSchema.safeParse(existingContact);
 
         // db result doesnt match contact schema
-        if (!contactData.success) {
-          console.log(contactData.error);
-          return res
-            .status(500)
-            .json({ error: "db schema doesn't match contact schema" });
+        if (!contacts.success)
+          return res.status(400).json({ error: "invalid input" });
+
+        if (contacts.data.length === 1) {
+          const newContact = await db.addContact(body, "secondary");
+          const contactData = ContactSchema.safeParse(newContact);
+
+          // db result doesnt match contact schema
+          if (!contactData.success) {
+            console.log(contactData.error);
+            return res
+              .status(500)
+              .json({ error: "db schema doesn't match contact schema" });
+          }
+          const primary = contacts.data[0];
+          const secondary = contactData.data;
+
+          const emails = contacts.data
+            .map((d) => d.email)
+            .filter((e): e is string => !!e);
+
+          const phoneNumbers = contacts.data
+            .map((d) => d.phone_number)
+            .filter((n): n is string => !!n);
+
+          const result: IdentityReturnType = {
+            contact: {
+              primaryContactId: primary.id,
+              emails: secondary.email
+                ? [...new Set([...emails, secondary.email])]
+                : emails,
+              phoneNumbers: secondary.phone_number
+                ? [...new Set([...phoneNumbers, secondary.phone_number])]
+                : phoneNumbers,
+              secondaryContactIds: [secondary.id],
+            },
+          };
+          return res.status(200).json({ success: true, data: result });
         }
 
-        // TODO : better if/else handling
+        const data = await db.updatePrecedence(contacts.data[1].id);
+        if (!data) res.status(500).json({ success: false, error: "db error" });
+
+        const emails = [
+          ...new Set(
+            contacts.data.map((d) => d.email).filter((e): e is string => !!e)
+          ),
+        ];
+
+        const phoneNumbers = [
+          ...new Set(
+            contacts.data
+              .map((d) => d.phone_number)
+              .filter((n): n is string => !!n)
+          ),
+        ];
+
         const result: IdentityReturnType = {
           contact: {
             primaryContactId: contacts.data[0].id,
-            emails: contactData.data.email
-              ? contacts.data[0].email
-                ? [contacts.data[0].email, contactData.data.email]
-                : [contactData.data.email]
-              : contacts.data[0].email
-              ? [contacts.data[0].email]
-              : [],
-            phoneNumbers: contactData.data.phone_number
-              ? contacts.data[0].phone_number
-                ? [contacts.data[0].phone_number, contactData.data.phone_number]
-                : [contactData.data.phone_number]
-              : contacts.data[0].phone_number
-              ? [contacts.data[0].phone_number]
-              : [],
-            secondaryContactIds: [contactData.data.id],
+            emails: emails,
+            phoneNumbers: phoneNumbers,
+            secondaryContactIds: [contacts.data[1].id],
           },
         };
         return res.status(200).json({ success: true, data: result });
+      } catch (e: any) {
+        res
+          .status(500)
+          .json({ success: false, error: "internal server error : ", e });
       }
-
-      if (contacts.data)
-        return res.status(200).json({ success: true, data: "todo" });
     }
   );
 

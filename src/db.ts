@@ -68,11 +68,23 @@ export class DB {
     try {
       const client = await this.getConnection();
       const result = await client.query(
-        `INSERT INTO contact(phone_number,email,link_precedence) VALUES($1,$2) RETURNING *;`,
+        `INSERT INTO contact(phone_number,email,link_precedence) VALUES($1,$2,$3) RETURNING *;`,
         [String(input.phoneNumber), input.email, precedence]
       );
-      console.log(result.rows[0]);
       return result.rows[0];
+    } catch (e: any) {
+      console.log("Error getting contact info ", e);
+      throw e;
+    }
+  }
+  async updatePrecedence(id: number, precedence: Precedence = "secondary") {
+    try {
+      const client = await this.getConnection();
+      const result = await client.query(
+        `UPDATE contact SET link_precedence = $1 WHERE id = $2`,
+        [precedence, id]
+      );
+      return result.rowCount;
     } catch (e: any) {
       console.log("Error getting contact info ", e);
       throw e;
