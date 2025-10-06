@@ -1,4 +1,5 @@
 import { Client } from "pg";
+import { IdentityInput } from "./types";
 export class DB {
   private static db: DB;
   private client: Client | null = null;
@@ -44,6 +45,36 @@ export class DB {
       console.log("DB initalized");
     } catch (e: any) {
       console.log("DB initalization failed");
+      throw e;
+    }
+  }
+
+  async getContact(input: IdentityInput) {
+    try {
+      const client = await this.getConnection();
+      const result = await client.query(
+        `SELECT * FROM contact WHERE phone_number = $1 OR email = $2 ORDER BY created_at ASC;`,
+        [String(input.phoneNumber), input.email]
+      );
+      if (result.rows.length === 0) return null;
+      return result.rows;
+    } catch (e: any) {
+      console.log("Error getting contact info ", e);
+      throw e;
+    }
+  }
+
+  async addContact(input: IdentityInput) {
+    try {
+      const client = await this.getConnection();
+      const result = await client.query(
+        `INSERT INTO contact(phone_number,email) VALUES($1,$2) RETURNING *;`,
+        [String(input.phoneNumber), input.email]
+      );
+      console.log(result.rows[0]);
+      return result.rows[0];
+    } catch (e: any) {
+      console.log("Error getting contact info ", e);
       throw e;
     }
   }

@@ -10,7 +10,7 @@ export const IdentityReturnTypeSchema = z.object({
     primaryContactId: z.int(),
     emails: z.array(z.email()),
     phoneNumbers: z.array(z.int()),
-    secondaryContactIds: z.array(z.int()),
+    secondaryContactIds: z.array(z.int()).nullable(),
   }),
 });
 
@@ -18,13 +18,13 @@ export const precedene = z.enum(["primary", "secondary"]);
 
 export const ContactSchema = z.object({
   id: z.int(),
-  phoneNumber: z.string().nullable(),
+  phone_number: z.string().nullable(),
   email: z.string().nullable(),
-  linkedId: z.int(),
-  linkPrecedence: precedene,
-  createdAt: z.iso.time(), // TODO: check datatime type after db setup
-  udpdatedAt: z.iso.time(),
-  deletedAt: z.iso.time().nullable(),
+  linked_id: z.int().nullable(),
+  link_precedence: precedene,
+  created_at: z.date(),
+  updated_at: z.date(),
+  deleted_at: z.date().nullable(),
 });
 
 export type IdentityInput = z.infer<typeof IdentityInputSchema>;

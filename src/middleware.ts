@@ -7,8 +7,10 @@ export const validateInput = (
   next: NextFunction
 ) => {
   const body = req.body;
-  if (!body) return res.status(400).json({ error: "invalid input" });
+  if (!body)
+    return res.status(400).json({ success: false, error: "invalid input" });
   const valid = IdentityInputSchema.safeParse(body);
-  if (!valid.success) return res.status(400).json({ error: "invalid input" });
+  if (!valid.success)
+    return res.status(400).json({ success: false, error: "invalid input" });
   next();
 };
