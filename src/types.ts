@@ -29,3 +29,4 @@ export const ContactSchema = z.object({
 
 export type IdentityInput = z.infer<typeof IdentityInputSchema>;
 export type IdentityReturnType = z.infer<typeof IdentityReturnTypeSchema>;
+export type Contact = z.infer<typeof ContactSchema>;
