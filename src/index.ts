@@ -156,7 +156,9 @@ async function setupServer() {
       if (!contacts.success)
         return res.status(400).json({ error: "invalid input" });
 
+      // if there is only 1 record with same email or password
       if (contacts.data.length === 1) {
+        // if the record has same email and password as request body
         if (
           contacts.data[0].email === body.email &&
           contacts.data[0].phone_number === String(body.phoneNumber)
@@ -173,7 +175,11 @@ async function setupServer() {
           };
           return res.status(200).json({ success: true, data: result });
         }
-        const newContact = await db.addContact(body, "secondary");
+        const newContact = await db.addContact(
+          body,
+          "secondary",
+          contacts.data[0].id
+        );
         const contactData = ContactSchema.safeParse(newContact);
 
         // db result doesnt match contact schema
@@ -209,14 +215,48 @@ async function setupServer() {
         return res.status(200).json({ success: true, data: result });
       }
 
-      const data = await db.updatePrecedence(
-        contacts.data[1].id,
-        contacts.data[0].id
+      // check if record with same email and phone number exists
+      const recordExists = contacts.data.find(
+        (c) =>
+          c.email === body.email && c.phone_number === String(body.phoneNumber)
       );
-      if (!data)
-        return res
-          .status(404)
-          .json({ success: false, error: "contact not found" });
+      // create record if not exits
+      if (!recordExists) {
+        const newSecondaryData = await db.addContact(
+          body,
+          "secondary",
+          contacts.data[0].id
+        );
+
+        const contactData = ContactSchema.safeParse(newSecondaryData);
+
+        // db result doesnt match contact schema
+        if (!contactData.success) {
+          console.log(contactData.error);
+          return res
+            .status(500)
+            .json({ error: "db schema doesn't match contact schema" });
+        }
+      }
+
+      const secondaryRecords = contacts.data.slice(1);
+
+      // check if other records has link precendence set to primary
+      const primaryPrecendene = secondaryRecords
+        .filter((r) => r.link_precedence === "primary")
+        .map((r) => r.id);
+
+      // update link precendence if any records with primary link precedence exists
+      if (primaryPrecendene.length != 0) {
+        const data = await db.updatePrecedence(
+          primaryPrecendene,
+          contacts.data[0].id
+        );
+        if (!data)
+          return res
+            .status(404)
+            .json({ success: false, error: "contact not found" });
+      }
 
       const emails = [
         ...new Set(
@@ -242,9 +282,8 @@ async function setupServer() {
       };
       return res.status(200).json({ success: true, data: result });
     } catch (e: any) {
-      res
-        .status(500)
-        .json({ success: false, error: "internal server error : " });
+      console.log("error identifying customer : ", e);
+      res.status(500).json({ success: false, error: "internal server error" });
     }
   });
 

@@ -82,14 +82,14 @@ export class DB {
     }
   }
   async updatePrecedence(
-    id: number,
+    id: number[],
     primaryID: number,
     precedence: Precedence = "secondary"
   ) {
     try {
       const client = await this.getConnection();
       const result = await client.query(
-        `UPDATE contact SET link_precedence = $1, linked_id = $2 WHERE id = $3`,
+        `UPDATE contact SET link_precedence = $1, linked_id = $2 WHERE id = ANY($3)`,
         [precedence, primaryID, id]
       );
       if (!result.rowCount) return null;
