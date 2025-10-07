@@ -53,13 +53,13 @@ export class DB {
     try {
       const client = await this.getConnection();
       const result = await client.query(
-        `SELECT * FROM contact WHERE phone_number = $1 OR email = $2 ORDER BY created_at ASC LIMIT 2;`,
+        `SELECT * FROM contact WHERE phone_number = $1 OR email = $2 ORDER BY created_at ASC;`,
         [String(input.phoneNumber), input.email]
       );
       if (result.rows.length === 0) return null;
       return result.rows;
     } catch (e: any) {
-      console.log("Error getting contact info ", e);
+      console.log("Error querying contact info ", e);
       throw e;
     }
   }
@@ -77,7 +77,7 @@ export class DB {
       );
       return result.rows[0];
     } catch (e: any) {
-      console.log("Error getting contact info ", e);
+      console.log("Error creating contact info ", e);
       throw e;
     }
   }
@@ -92,9 +92,23 @@ export class DB {
         `UPDATE contact SET link_precedence = $1, linked_id = $2 WHERE id = $3`,
         [precedence, primaryID, id]
       );
+      if (!result.rowCount) return null;
       return result.rowCount;
     } catch (e: any) {
-      console.log("Error getting contact info ", e);
+      console.log("Error updating contact info ", e);
+      throw e;
+    }
+  }
+  async deleteContact(id: number) {
+    try {
+      const client = await this.getConnection();
+      const result = await client.query("DELETE from contact WHERE id=$1", [
+        id,
+      ]);
+      if (result.rowCount === 0) return null;
+      return result.rowCount;
+    } catch (e: any) {
+      console.log("Error deleting contact info ", e);
       throw e;
     }
   }
