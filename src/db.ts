@@ -53,7 +53,7 @@ export class DB {
     try {
       const client = await this.getConnection();
       const result = await client.query(
-        `SELECT * FROM contact WHERE phone_number = $1 OR email = $2 ORDER BY created_at ASC;`,
+        `SELECT * FROM contact WHERE phone_number = $1 OR email = $2 ORDER BY created_at ASC LIMIT 2;`,
         [String(input.phoneNumber), input.email]
       );
       if (result.rows.length === 0) return null;
@@ -64,12 +64,16 @@ export class DB {
     }
   }
 
-  async addContact(input: IdentityInput, precedence: Precedence = "primary") {
+  async addContact(
+    input: IdentityInput,
+    precedence: Precedence = "primary",
+    primaryID: number | null = null
+  ) {
     try {
       const client = await this.getConnection();
       const result = await client.query(
-        `INSERT INTO contact(phone_number,email,link_precedence) VALUES($1,$2,$3) RETURNING *;`,
-        [String(input.phoneNumber), input.email, precedence]
+        `INSERT INTO contact(phone_number,email,link_precedence,linked_id) VALUES($1,$2,$3,$4) RETURNING *;`,
+        [String(input.phoneNumber), input.email, precedence, primaryID]
       );
       return result.rows[0];
     } catch (e: any) {
@@ -77,12 +81,16 @@ export class DB {
       throw e;
     }
   }
-  async updatePrecedence(id: number, precedence: Precedence = "secondary") {
+  async updatePrecedence(
+    id: number,
+    primaryID: number,
+    precedence: Precedence = "secondary"
+  ) {
     try {
       const client = await this.getConnection();
       const result = await client.query(
-        `UPDATE contact SET link_precedence = $1 WHERE id = $2`,
-        [precedence, id]
+        `UPDATE contact SET link_precedence = $1, linked_id = $2 WHERE id = $3`,
+        [precedence, primaryID, id]
       );
       return result.rowCount;
     } catch (e: any) {

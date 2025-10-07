@@ -99,7 +99,10 @@ async function setupServer() {
         return res.status(200).json({ success: true, data: result });
       }
 
-      const data = await db.updatePrecedence(contacts.data[1].id);
+      const data = await db.updatePrecedence(
+        contacts.data[1].id,
+        contacts.data[0].id
+      );
       if (!data) res.status(500).json({ success: false, error: "db error" });
 
       const emails = [
