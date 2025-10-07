@@ -157,6 +157,22 @@ async function setupServer() {
         return res.status(400).json({ error: "invalid input" });
 
       if (contacts.data.length === 1) {
+        if (
+          contacts.data[0].email === body.email &&
+          contacts.data[0].phone_number === String(body.phoneNumber)
+        ) {
+          const result: IdentityReturnType = {
+            contact: {
+              primaryContactId: contacts.data[0].id,
+              emails: contacts.data[0].email ? [contacts.data[0].email] : [],
+              phoneNumbers: contacts.data[0].phone_number
+                ? [contacts.data[0].phone_number]
+                : [],
+              secondaryContactIds: [],
+            },
+          };
+          return res.status(200).json({ success: true, data: result });
+        }
         const newContact = await db.addContact(body, "secondary");
         const contactData = ContactSchema.safeParse(newContact);
 
